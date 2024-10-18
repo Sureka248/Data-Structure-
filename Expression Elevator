@@ -1,0 +1,192 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+
+#define MAX 100
+
+typedef struct Stack {
+    int top;
+    int items[MAX];
+} Stack;
+
+void push(Stack *s, int value) {
+    if (s->top == MAX - 1) {
+        printf("Stack Overflow\n");
+        return;
+    }
+    s->items[++(s->top)] = value;
+}
+
+int pop(Stack *s) {
+    if (s->top == -1) {
+        printf("Stack Underflow\n");
+        return -1;
+    }
+    return s->items[(s->top)--];
+}
+
+int peek(Stack *s) {
+    if (s->top == -1) {
+        return -1;
+    }
+    return s->items[s->top];
+}
+
+int isOperator(char c) {
+    return c == '+' || c == '-' || c == '*' || c == '/';
+}
+
+int precedence(char c) {
+    switch (c) {
+        case '+':
+        case '-':
+            return 1;
+        case '*':
+        case '/':
+            return 2;
+        default:
+            return 0;
+    }
+}
+
+int infixToPostfix(char *infix, char *postfix) {
+    Stack s;
+    s.top = -1;
+    int i = 0, j = 0;
+    while (infix[i] != '\0') {
+        if (isdigit(infix[i])) {
+            postfix[j++] = infix[i];
+        } else if (infix[i] == '(') {
+            push(&s, infix[i]);
+        } else if (infix[i] == ')') {
+            while (peek(&s) != '(') {
+                postfix[j++] = pop(&s);
+            }
+            pop(&s); // pop '('
+        } else if (isOperator(infix[i])) {
+            while (s.top != -1 && precedence(peek(&s)) >= precedence(infix[i])) {
+                postfix[j++] = pop(&s);
+            }
+            push(&s, infix[i]);
+        }
+        i++;
+    }
+    while (s.top != -1) {
+        postfix[j++] = pop(&s);
+    }
+    postfix[j] = '\0';
+    return 1;
+}
+
+int evaluatePostfix(char *postfix) {
+    Stack s;
+    s.top = -1;
+    int i = 0;
+    while (postfix[i] != '\0') {
+        if (isdigit(postfix[i])) {
+            push(&s, postfix[i] - '0');
+        } else if (isOperator(postfix[i])) {
+            int val2 = pop(&s);
+            int val1 = pop(&s);
+            switch (postfix[i]) {
+                case '+': push(&s, val1 + val2); break;
+                case '-': push(&s, val1 - val2); break;
+                case '*': push(&s, val1 * val2); break;
+                case '/': push(&s, val1 / val2); break;
+            }
+        }
+        i++;
+    }
+        return pop(&s);
+}
+
+int infixToPrefix(char *infix, char *prefix) {
+    Stack s;
+    s.top = -1;
+    int i = strlen(infix) - 1, j = 0;
+    char temp[MAX];
+
+    while (i >= 0) {
+        if (isdigit(infix[i])) {
+            temp[j++] = infix[i];
+        } else if (infix[i] == ')') {
+            push(&s, infix[i]);
+        } else if (infix[i] == '(') {
+            while (peek(&s) != ')') {
+                temp[j++] = pop(&s);
+            }
+            pop(&s); // pop ')'
+        } else if (isOperator(infix[i])) {
+            while (s.top != -1 && precedence(peek(&s)) > precedence(infix[i])) {
+                temp[j++] = pop(&s);
+            }
+            push(&s, infix[i]);
+        }
+        i--;
+    }
+    while (s.top != -1) {
+        temp[j++] = pop(&s);
+    }
+    temp[j] = '\0';
+
+    // Reverse temp to get the correct prefix expression
+    for (i = 0; i < j; i++) {
+        prefix[i] = temp[j - i - 1];
+    }
+    prefix[j] = '\0';
+    return 1;
+}
+
+int evaluatePrefix(char *prefix) {
+    Stack s;
+    s.top = -1;
+    int i = strlen(prefix) - 1;
+    while (i >= 0) {
+        if (isdigit(prefix[i])) {
+            push(&s, prefix[i] - '0');
+        } else if (isOperator(prefix[i])) {
+            int val1 = pop(&s);
+            int val2 = pop(&s);
+            switch (prefix[i]) {
+                case '+': push(&s, val1 + val2); break;
+                case '-': push(&s, val1 - val2); break;
+                case '*': push(&s, val1 * val2); break;
+                case '/': push(&s, val1 / val2); break;
+            }
+        }
+        i--;
+    }
+    return pop(&s);
+}
+
+int evaluateInfix(char *infix) {
+    char postfix[MAX];
+    infixToPostfix(infix, postfix);
+    return evaluatePostfix(postfix);
+}
+
+int main() {
+    char infix[MAX], postfix[MAX], prefix[MAX];
+    int infixResult;
+
+    printf("Enter an expression: ");
+    fgets(infix, MAX, stdin);
+
+    // Remove newline character if it's there
+    infix[strcspn(infix, "\n")] = 0;
+
+    infixResult = evaluateInfix(infix);
+    printf("Infix expression: %s\n", infix);
+    printf("Infix evaluation: %d\n", infixResult);
+
+    infixToPostfix(infix, postfix);
+    printf("Postfix expression: %s\n", postfix);
+    printf("Postfix evaluation: %d\n", evaluatePostfix(postfix));
+
+    infixToPrefix(infix, prefix);
+    printf("Prefix expression: %s\n", prefix);
+    printf("Prefix evaluation: %d\n", evaluatePrefix(prefix));
+
+    return 0;
+}
